@@ -101,7 +101,9 @@ class Node:
             Return the added child node
         """
         n = Node(move = m, parent = self, state = s)
-        self.untriedMoves.remove(m)
+        #self.untriedMoves.remove(m) #can't do this because m is a different copy of the same move
+        #A simpler data structure for cards (even just a list of card names) would improve this
+        self.untriedMoves = [move for move in self.untriedMoves if move.value != m.value]
         self.childNodes.append(n)
         return n
 
@@ -141,23 +143,28 @@ def UCT(rootstate, itermax, verbose = False):
     rootnode = Node(state = rootstate)
 
     for i in range(itermax):
+        print 'starting at root node'
         node = rootnode
         state = rootstate.Clone()
 
         # Select
         while node.untriedMoves == [] and node.childNodes != []: # node is fully expanded and non-terminal
             node = node.UCTSelectChild()
+            print 'making select move ' + str(node.move)
             state.DoMove(node.move)
 
         # Expand
         if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
             m = random.choice(node.untriedMoves)
+            print 'making expand move ' + str(node.move)
             state.DoMove(m)
             node = node.AddChild(m,state) # add child and descend tree
 
         # Rollout - this can often be made orders of magnitude quicker using a state.GetRandomMove() function
         while not state.game.is_over: # while state is non-terminal
-            state.DoMove(random.choice(state.GetMoves()))
+            m = random.choice(state.GetMoves())
+            print 'making rollout move ' + str(m)
+            state.DoMove(m)
 
         # Backpropagate
         while node != None: # backpropagate from the expanded node and work back to the root node
@@ -179,8 +186,10 @@ def UCTPlayGame():
     while not state.game.is_over:
         print str(state)
         if state.playerJustMoved == state.blue_player:
+            print 'starting a UCT'
             m = UCT(rootstate = state, itermax = 1000, verbose = True) # play with values for itermax and verbose = True
         else:
+            print 'starting a UCT'
             m = UCT(rootstate = state, itermax = 100, verbose = True)
         print "Best Move: " + str(m) + "\n"
         state.DoMove(m)
