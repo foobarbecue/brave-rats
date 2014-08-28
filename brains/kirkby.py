@@ -9,34 +9,33 @@ from components.fight import resolve_fight, successful_spy_color
 from components.game_status import GameStatus
 from components.player import Player
 
-def kirkby_brain(player, game, spied_card):
-    '''A monte carlo tree search AI.
-    Algorithm based on http://mcts.ai/code/python.html .
-    Named after Kirkby et al (2013) doi: 10.3109/09553002.2013.791407
-
-    :param player: a Player instance
-    :param game: a Game instance, used to look up info about played cards, score, etc.
-    :param spied_card: If I successfully played a spy last turn, this is the card that the opponent has revealed and
-        will play. Otherwise, None
-    :return: a card from my player's hand with which to vanquish my opponent.
+def reconstruct_hand(game,player_color):
     '''
-    if spied_card:
-        print 'Hah! You think you can beat me with that {}? Prepare to be CRUSHED!'.format(spied_card.name)
-    return random.choice(player.hand)
+    Calculate a player's hand from the move history stored in the game instance.
+    '''
+    #Color.red.value is always 1, and Color.red.value is always 2
+    return [card[player_color.value.ind-1] for card in game.value.all_fights]
 
 class BRState(object):
     '''
-    A wrapper around brave_rats game implementing the interface that mcts expects
+    A wrapper around brave_rats game implementing the interface that mcts expects.
     '''
-    def __init__(self):
+    def __init__(self, player=None, game=None, spied_card=None):
+        self.game = game or GameStatus()
         self.red_player = Player(Color.red, brain_fn=None)
         self.blue_player = Player(Color.blue, brain_fn=None)
+        if self.player.color == Color.red:
+            self.playerToMoveNext=self.red_player
+            self.playerToMoveNext = self.blue_player
+            self.blue_player.hand=reconstruct_hand(game=game,player_color=self.blue_player.color)
+
+        self.playerJustMoved = self.red_player
+
+
+
+        # use these later for imaginary play
         self.red_card = None
         self.blue_card = None
-        self.playerJustMoved = self.red_player
-        self.playerToMoveNext = self.blue_player
-        self.game = GameStatus()
-
     def Clone(self):
         return copy.deepcopy(self)
 
@@ -199,7 +198,16 @@ def UCTPlayGame():
         print state.playerJustMoved + " loses!"
     else: print "Nobody wins!"
 
-if __name__ == "__main__":
-    """ Play a single game to the end using UCT for both players.
-    """
-    UCTPlayGame()
+def kirkby_brain(player, game, spied_card):
+    '''A monte carlo tree search AI.
+    Algorithm based on http://mcts.ai/code/python.html .
+    Named after Kirkby et al (2013) doi: 10.3109/09553002.2013.791407
+
+    :param player: a Player instance
+    :param game: a Game instance, used to look up info about played cards, score, etc.
+    :param spied_card: If I successfully played a spy last turn, this is the card that the opponent has revealed and
+        will play. Otherwise, None
+    :return: a card from my player's hand with which to vanquish my opponent.
+    '''
+
+    return UCT(BRState(player, game, spied_card), itermax = 100, verbose = True)
