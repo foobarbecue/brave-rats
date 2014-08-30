@@ -4,7 +4,7 @@ from math import sqrt, log
 # To train his tree, Kirkby needs to be able to run games as both players. That means
 # he needs to implement UCT, which that replaces the play_game loop for learning. Thus
 # all these imports
-from components.cards import Color
+from components.cards import Color, initial_hand
 from components.fight import resolve_fight, successful_spy_color
 from components.game_status import GameStatus
 from components.player import Player
@@ -13,8 +13,9 @@ def reconstruct_hand(game,player_color):
     '''
     Calculate a player's hand from the move history stored in the game instance.
     '''
-    #Color.red.value is always 1, and Color.red.value is always 2
-    return [card[player_color.value.ind-1] for card in game.value.all_fights]
+    #TODO optimize
+    cards_played=[card[player_color.value.ind-1] for card in game.all_fights]
+    return [card for card in initial_hand() if card not in cards_played]
 
 class BRState(object):
     '''
@@ -24,7 +25,7 @@ class BRState(object):
         self.game = game or GameStatus()
         self.red_player = Player(Color.red, brain_fn=None)
         self.blue_player = Player(Color.blue, brain_fn=None)
-        if self.player.color == Color.red:
+        if player.color == Color.red:
             self.playerToMoveNext=self.red_player
             self.playerToMoveNext = self.blue_player
             self.blue_player.hand=reconstruct_hand(game=game,player_color=self.blue_player.color)
