@@ -173,28 +173,6 @@ def UCT(rootstate, itermax, verbose = False):
 
     return sorted(rootnode.childNodes, key = lambda c: c.visits)[-1].move # return the move that was most visited
 
-def UCTPlayGame():
-    """ Play a sample game between two UCT players where each player gets a different number
-        of UCT iterations (= simulations = tree nodes).
-    """
-    state = BRState()
-
-    while not state.game.is_over:
-        print str(state)
-        if state.playerJustMoved == state.blue_player:
-            print 'starting a UCT'
-            m = UCT(rootstate = state, itermax = 1000, verbose = True) # play with values for itermax and verbose = True
-        else:
-            print 'starting a UCT'
-            m = UCT(rootstate = state, itermax = 100, verbose = True)
-        print "Best Move: " + str(m) + "\n"
-        state.DoMove(m)
-    if state.GetResult(state.playerJustMoved) == 1.0:
-        print state.playerJustMoved + " wins!"
-    elif state.GetResult(state.playerJustMoved) == 0.0:
-        print state.playerJustMoved + " loses!"
-    else: print "Nobody wins!"
-
 def kirkby_brain(player, game, spied_card):
     '''A monte carlo tree search AI.
     Algorithm based on http://mcts.ai/code/python.html .
