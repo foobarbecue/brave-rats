@@ -14,7 +14,7 @@ def reconstruct_hand(game,player_color):
     Calculate a player's hand from the move history stored in the game instance.
     '''
     #TODO optimize
-    cards_played=[card[player_color.value.ind-1] for card in game.all_fights]
+    cards_played=[card[player_color.value-1] for card in game.all_fights]
     return [card for card in initial_hand() if card not in cards_played]
 
 class BRState(object):
@@ -26,13 +26,10 @@ class BRState(object):
         self.red_player = Player(Color.red, brain_fn=None)
         self.blue_player = Player(Color.blue, brain_fn=None)
         if player.color == Color.red:
-            self.playerToMoveNext=self.red_player
-            self.playerToMoveNext = self.blue_player
+            self.red_player.hand = player.hand
+            self.playerToMoveNext = self.red_player
+            self.playerJustMoved = self.blue_player
             self.blue_player.hand=reconstruct_hand(game=game,player_color=self.blue_player.color)
-
-        self.playerJustMoved = self.red_player
-
-
 
         # use these later for imaginary play
         self.red_card = None
@@ -44,13 +41,12 @@ class BRState(object):
         '''
         Play a single card (half of a round)
         '''
-        if self.playerJustMoved == self.red_player:
+        if self.playerToMoveNext == self.red_player:
             self.red_card = move
         else:
             self.blue_card = move
-            #round finishes when red plays, so resolve the fight
+            #round finishes when blue plays, so resolve the fight
             resolve_fight(self.red_card, self.blue_card, self.game)
-            print self.game.score_summary
 
         #switcheroo
         self.playerToMoveNext, self.playerJustMoved = self.playerJustMoved, self.playerToMoveNext
@@ -143,27 +139,27 @@ def UCT(rootstate, itermax, verbose = False):
     rootnode = Node(state = rootstate)
 
     for i in range(itermax):
-        print 'starting at root node'
+#         print 'starting at root node'
         node = rootnode
         state = rootstate.Clone()
 
         # Select
         while node.untriedMoves == [] and node.childNodes != []: # node is fully expanded and non-terminal
             node = node.UCTSelectChild()
-            print 'making select move ' + str(node.move)
+#             print 'making select move ' + str(node.move)
             state.DoMove(node.move)
 
         # Expand
         if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
             m = random.choice(node.untriedMoves)
-            print 'making expand move ' + str(node.move)
+#             print 'making expand move ' + str(m)
             state.DoMove(m)
             node = node.AddChild(m,state) # add child and descend tree
 
         # Rollout - this can often be made orders of magnitude quicker using a state.GetRandomMove() function
         while not state.game.is_over: # while state is non-terminal
             m = random.choice(state.GetMoves())
-            print 'making rollout move ' + str(m)
+#             print 'making rollout move ' + str(m)
             state.DoMove(m)
 
         # Backpropagate
@@ -210,5 +206,5 @@ def kirkby_brain(player, game, spied_card):
         will play. Otherwise, None
     :return: a card from my player's hand with which to vanquish my opponent.
     '''
-
-    return UCT(BRState(player, game, spied_card), itermax = 100, verbose = True)
+    move = UCT(BRState(player, game, spied_card), itermax = 100, verbose = False)
+    return move
