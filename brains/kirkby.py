@@ -146,42 +146,44 @@ def UCT(rootstate, itermax, verbose = False):
     rootnode = Node(state = rootstate)
 
     for i in range(itermax):
-        print 'starting at root node'
+#         print 'starting at root node'
         node = rootnode
         state = rootstate.Clone()
 
         # Select
-        while node.untriedMoves == [] and node.childNodes != []: # node is fully expanded and non-terminal
+        while node.untriedMoves == [] and node.childNodes != [] and not state.game.is_over: # node is fully expanded and non-terminal
             node = node.UCTSelectChild()
-            print 'making select move ' + str(node.move)
+#             print 'making select move ' + str(node.move)
             state.DoMove(node.move)
 
         # Expand
         if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
             m = random.choice(node.untriedMoves)
-            print 'making expand move ' + str(m)
+#             print 'making expand move ' + str(m)
             state.DoMove(m)
             node = node.AddChild(m,state) # add child and descend tree
 
         # Rollout - this can often be made orders of magnitude quicker using a state.GetRandomMove() function
         while not state.game.is_over: # while state is non-terminal
             m = random.choice(state.GetMoves())
-            print 'making rollout move ' + str(m)
+#             print 'making rollout move ' + str(m)
             state.DoMove(m)
-        print "imaginary game end with {}".format(state.game.all_fights)
-        if state.game.winner:
-            print "{} wins imaginary game".format(state.game.winner.name)
-        else:
-            print "tie"
+#         print "imaginary game end with {}".format(state.game.all_fights)
+#         if state.game.winner:
+#             print "{} wins imaginary game".format(state.game.winner.name)
+#         else:
+#             print "tie"
 
         # Backpropagate
         while node != None: # backpropagate from the expanded node and work back to the root node
-            node.Update(state.GetResult(state.playerJustMoved)) # state is terminal. Update node with result from POV of ownPlayer
+            node.Update(state.GetResult(node.playerJustMoved)) # state is terminal. Update node with result from POV of ownPlayer
             node = node.parentNode
 
     # Output some information about the tree - can be omitted
-    if (verbose): print rootnode.TreeToString(0)
-    else: print rootnode.ChildrenToString()
+#     if verbose:
+#         print rootnode.TreeToString(0)
+#     else:
+#         print rootnode.ChildrenToString()
 
     return sorted(rootnode.childNodes, key = lambda c: c.visits)[-1].move # return the move that was most visited
 
