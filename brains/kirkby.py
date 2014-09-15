@@ -28,8 +28,10 @@ class BRState(object):
         if player.color == Color.red:
             self.red_player.hand = player.hand
             self.playerToMoveNext = self.red_player
+            self.me = self.playerToMoveNext
             self.playerJustMoved = self.blue_player
             self.blue_player.hand=reconstruct_hand(game=game,player_color=self.blue_player.color)
+        #TODO make him play blue too!!!
 
         # use these later for imaginary play
         self.red_card = None
@@ -47,6 +49,7 @@ class BRState(object):
             self.blue_card = move
             #round finishes when blue plays, so resolve the fight
             resolve_fight(self.red_card, self.blue_card, self.game)
+        self.playerToMoveNext.hand.remove(move)
 
         #switcheroo
         self.playerToMoveNext, self.playerJustMoved = self.playerJustMoved, self.playerToMoveNext
@@ -60,12 +63,14 @@ class BRState(object):
         :param player: Specifies point of view. 1.0 is a win for this player.
         '''
         #Should results be current num points? Does that work with the back propagation?
-        if self.game.winner == player:
-            return 1.0
-        elif self.game.winner == player:
-            return 0.0
+        if not self.game.winner:
+            return 0.5
+        elif self.game.winner == player.color:
+            return 1.0 #win
         else:
-            return 0.5 #tie
+            return 0.0 #loss
+
+
 
     def ____repr__(self):
         return self.game.score_summary
@@ -108,6 +113,8 @@ class Node:
         """
         self.visits += 1
         self.wins += result
+        #TODO this is for testing
+        self.hand1 = self.playerJustMoved.hand
 
     def __repr__(self):
         return "[M:" + str(self.move) + " W/V:" + str(self.wins) + "/" + str(self.visits) + " U:" + str(self.untriedMoves) + "]"
@@ -139,32 +146,37 @@ def UCT(rootstate, itermax, verbose = False):
     rootnode = Node(state = rootstate)
 
     for i in range(itermax):
-#         print 'starting at root node'
+        print 'starting at root node'
         node = rootnode
         state = rootstate.Clone()
 
         # Select
         while node.untriedMoves == [] and node.childNodes != []: # node is fully expanded and non-terminal
             node = node.UCTSelectChild()
-#             print 'making select move ' + str(node.move)
+            print 'making select move ' + str(node.move)
             state.DoMove(node.move)
 
         # Expand
         if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
             m = random.choice(node.untriedMoves)
-#             print 'making expand move ' + str(m)
+            print 'making expand move ' + str(m)
             state.DoMove(m)
             node = node.AddChild(m,state) # add child and descend tree
 
         # Rollout - this can often be made orders of magnitude quicker using a state.GetRandomMove() function
         while not state.game.is_over: # while state is non-terminal
             m = random.choice(state.GetMoves())
-#             print 'making rollout move ' + str(m)
+            print 'making rollout move ' + str(m)
             state.DoMove(m)
+        print "imaginary game end with {}".format(state.game.all_fights)
+        if state.game.winner:
+            print "{} wins imaginary game".format(state.game.winner.name)
+        else:
+            print "tie"
 
         # Backpropagate
         while node != None: # backpropagate from the expanded node and work back to the root node
-            node.Update(state.GetResult(node.playerJustMoved)) # state is terminal. Update node with result from POV of node.playerJustMoved
+            node.Update(state.GetResult(state.playerJustMoved)) # state is terminal. Update node with result from POV of ownPlayer
             node = node.parentNode
 
     # Output some information about the tree - can be omitted
@@ -184,5 +196,5 @@ def kirkby_brain(player, game, spied_card):
         will play. Otherwise, None
     :return: a card from my player's hand with which to vanquish my opponent.
     '''
-    move = UCT(BRState(player, game, spied_card), itermax = 100, verbose = False)
+    move = UCT(BRState(player, game, spied_card), itermax = 1000, verbose = False)
     return move
