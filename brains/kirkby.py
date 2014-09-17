@@ -15,7 +15,7 @@ def reconstruct_hand(game,player_color):
     '''
     #TODO optimize
     cards_played=[card[player_color.value-1] for card in game.all_fights]
-    return [card for card in initial_hand(game.initial_hands[player_color.name]) if card not in cards_played]
+    return [card for card in initial_hand() if card not in cards_played]
 
 class BRState(object):
     '''
@@ -23,8 +23,8 @@ class BRState(object):
     '''
     def __init__(self, player=None, game=None, spied_card=None):
         self.game = game or GameStatus()
-        self.red_player = Player(Color.red, brain_fn=None, hand=None)
-        self.blue_player = Player(Color.blue, brain_fn=None, hand=None)
+        self.red_player = Player(Color.red, brain_fn=None)
+        self.blue_player = Player(Color.blue, brain_fn=None)
         if player.color == Color.red:
             self.red_player.hand = player.hand
             self.playerToMoveNext = self.red_player
