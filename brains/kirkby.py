@@ -36,10 +36,10 @@ class BRState(object):
         # use these later for imaginary play
         self.red_card = None
         self.blue_card = None
-    def Clone(self):
+    def clone(self):
         return copy.deepcopy(self)
 
-    def DoMove(self, move):
+    def do_move(self, move):
         '''
         Play a single card (half of a round)
         '''
@@ -54,10 +54,10 @@ class BRState(object):
         #switcheroo
         self.playerToMoveNext, self.playerJustMoved = self.playerJustMoved, self.playerToMoveNext
 
-    def GetMoves(self):
+    def get_moves(self):
         return self.playerToMoveNext.hand
 
-    def GetResult(self, player):
+    def get_result(self, player):
         '''
         Game result scaled to 1.0
         :param player: Specifies point of view. 1.0 is a win for this player.
@@ -76,7 +76,7 @@ class BRState(object):
         return self.game.score_summary
 
 
-class Node:
+class Node(object):
     """ A node in the game tree. Note wins is always from the viewpoint of playerJustMoved.
         Crashes if state not specified.
     """
@@ -86,10 +86,10 @@ class Node:
         self.childNodes = []
         self.wins = 0
         self.visits = 0
-        self.untriedMoves = state.GetMoves() # future child nodes
+        self.untriedMoves = state.get_moves() # future child nodes
         self.playerJustMoved = state.playerJustMoved # the only part of the state that the Node needs later
 
-    def UCTSelectChild(self):
+    def UCT_select_child(self):
         """ Use the UCB1 formula to select a child node. Often a constant UCTK is applied so we have
             lambda c: c.wins/c.visits + UCTK * sqrt(2*log(self.visits)/c.visits to vary the amount of
             exploration versus exploitation.
@@ -97,7 +97,7 @@ class Node:
         s = sorted(self.childNodes, key = lambda c: c.wins/c.visits + sqrt(2*log(self.visits)/c.visits))[-1]
         return s
 
-    def AddChild(self, m, s):
+    def add_child(self, m, s):
         """ Remove m from untriedMoves and add a new child node for this move.
             Return the added child node
         """
@@ -108,8 +108,8 @@ class Node:
         self.childNodes.append(n)
         return n
 
-    def Update(self, result):
-        """ Update this node - one additional visit and result additional wins. result must be from the viewpoint of playerJustmoved.
+    def update(self, result):
+        """ update this node - one additional visit and result additional wins. result must be from the viewpoint of playerJustmoved.
         """
         self.visits += 1
         self.wins += result
@@ -119,19 +119,19 @@ class Node:
     def __repr__(self):
         return "[M:" + str(self.move) + " W/V:" + str(self.wins) + "/" + str(self.visits) + " U:" + str(self.untriedMoves) + "]"
 
-    def TreeToString(self, indent):
-        s = self.IndentString(indent) + str(self)
+    def tree_to_string(self, indent):
+        s = self.indent_string(indent) + str(self)
         for c in self.childNodes:
-             s += c.TreeToString(indent+1)
+             s += c.tree_to_string(indent+1)
         return s
 
-    def IndentString(self,indent):
+    def indent_string(self,indent):
         s = "\n"
         for i in range (1,indent+1):
             s += "| "
         return s
 
-    def ChildrenToString(self):
+    def children_to_string(self):
         s = ""
         for c in self.childNodes:
              s += str(c) + "\n"
@@ -148,26 +148,26 @@ def UCT(rootstate, itermax, verbose = False):
     for i in range(itermax):
 #         print 'starting at root node'
         node = rootnode
-        state = rootstate.Clone()
+        state = rootstate.clone()
 
         # Select
         while node.untriedMoves == [] and node.childNodes != [] and not state.game.is_over: # node is fully expanded and non-terminal
-            node = node.UCTSelectChild()
+            node = node.UCT_select_child()
 #             print 'making select move ' + str(node.move)
-            state.DoMove(node.move)
+            state.do_move(node.move)
 
         # Expand
         if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
             m = random.choice(node.untriedMoves)
 #             print 'making expand move ' + str(m)
-            state.DoMove(m)
-            node = node.AddChild(m,state) # add child and descend tree
+            state.do_move(m)
+            node = node.add_child(m,state) # add child and descend tree
 
         # Rollout - this can often be made orders of magnitude quicker using a state.GetRandomMove() function
         while not state.game.is_over: # while state is non-terminal
-            m = random.choice(state.GetMoves())
+            m = random.choice(state.get_moves())
 #             print 'making rollout move ' + str(m)
-            state.DoMove(m)
+            state.do_move(m)
 #         print "imaginary game end with {}".format(state.game.all_fights)
 #         if state.game.winner:
 #             print "{} wins imaginary game".format(state.game.winner.name)
@@ -176,18 +176,18 @@ def UCT(rootstate, itermax, verbose = False):
 
         # Backpropagate
         while node != None: # backpropagate from the expanded node and work back to the root node
-            node.Update(state.GetResult(node.playerJustMoved)) # state is terminal. Update node with result from POV of ownPlayer
+            node.update(state.get_result(node.playerJustMoved)) # state is terminal. update node with result from POV of ownPlayer
             node = node.parentNode
 
     # Output some information about the tree - can be omitted
 #     if verbose:
-#         print rootnode.TreeToString(0)
+#         print rootnode.tree_to_string(0)
 #     else:
-#         print rootnode.ChildrenToString()
+#         print rootnode.children_to_string()
 
     return sorted(rootnode.childNodes, key = lambda c: c.visits)[-1].move # return the move that was most visited
 
-def kirkby_brain(player, game, spied_card):
+def kirkby_brain_fn(player, game, spied_card):
     '''A monte carlo tree search AI.
     Algorithm based on http://mcts.ai/code/python.html .
     Named after Kirkby et al (2013) doi: 10.3109/09553002.2013.791407
