@@ -4,7 +4,6 @@ import sys
 
 from brains.example_ai import random_ai_brain_fn
 from brains.human import human_brain_fn
-from brains.kirkby import kirkby_brain
 from components.cards import Color
 from components.fight import resolve_fight, successful_spy_color
 from components.brain_management import get_brain_func
