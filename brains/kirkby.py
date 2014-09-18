@@ -2,12 +2,13 @@ import random
 import copy
 from math import sqrt, log
 # To train his tree, Kirkby needs to be able to run games as both players. That means
-# he needs to implement UCT, which that replaces the play_game loop for learning. Thus
+# he needs to implement find_best_move, which that replaces the play_game loop for learning. Thus
 # all these imports
 from components.cards import Color, initial_hand
 from components.fight import resolve_fight, successful_spy_color
 from components.game_status import GameStatus
 from components.player import Player
+
 
 def reconstruct_hand(game,player_color):
     '''
@@ -23,15 +24,19 @@ class BRState(object):
     '''
     def __init__(self, player=None, game=None, spied_card=None):
         self.game = game or GameStatus()
+        #Create "imaginary" players for simulation
         self.red_player = Player(Color.red, brain_fn=None)
         self.blue_player = Player(Color.blue, brain_fn=None)
         if player.color == Color.red:
             self.red_player.hand = player.hand
             self.playerToMoveNext = self.red_player
-            self.me = self.playerToMoveNext
             self.playerJustMoved = self.blue_player
             self.blue_player.hand=reconstruct_hand(game=game,player_color=self.blue_player.color)
-        #TODO make him play blue too!!!
+        elif player.color == Color.blue:
+            self.blue_player.hand = player.hand
+            self.playerToMoveNext = self.blue_player
+            self.playerJustMoved = self.red_player
+            self.red_player.hand=reconstruct_hand(game=game,player_color=self.red_player.color)
 
         # use these later for imaginary play
         self.red_card = None
@@ -47,11 +52,11 @@ class BRState(object):
             self.red_card = move
         else:
             self.blue_card = move
-            #round finishes when blue plays, so resolve the fight
+        if self.red_card and self.blue_card:
             resolve_fight(self.red_card, self.blue_card, self.game)
         self.playerToMoveNext.hand.remove(move)
-
-        #switcheroo
+        # Advance play to next player, unless successful spy has been played.
+        # TODO
         self.playerToMoveNext, self.playerJustMoved = self.playerJustMoved, self.playerToMoveNext
 
     def get_moves(self):
@@ -89,7 +94,7 @@ class Node(object):
         self.untriedMoves = state.get_moves() # future child nodes
         self.playerJustMoved = state.playerJustMoved # the only part of the state that the Node needs later
 
-    def UCT_select_child(self):
+    def select_best_child(self):
         """ Use the UCB1 formula to select a child node. Often a constant UCTK is applied so we have
             lambda c: c.wins/c.visits + UCTK * sqrt(2*log(self.visits)/c.visits to vary the amount of
             exploration versus exploitation.
@@ -122,7 +127,7 @@ class Node(object):
     def tree_to_string(self, indent):
         s = self.indent_string(indent) + str(self)
         for c in self.childNodes:
-             s += c.tree_to_string(indent+1)
+            s += c.tree_to_string(indent+1)
         return s
 
     def indent_string(self,indent):
@@ -134,14 +139,13 @@ class Node(object):
     def children_to_string(self):
         s = ""
         for c in self.childNodes:
-             s += str(c) + "\n"
+            s += str(c) + "\n"
         return s
 
 
-def UCT(rootstate, itermax, verbose = False):
+def find_best_move(rootstate, itermax, verbose = False):
     """ Conduct a UCT search for itermax iterations starting from rootstate.
-        Return the best move from the rootstate.
-        Assumes 2 alternating players (player 1 starts), with game results in the range [0.0, 1.0]."""
+        Return the best move from the rootstate."""
 
     rootnode = Node(state = rootstate)
 
@@ -152,7 +156,7 @@ def UCT(rootstate, itermax, verbose = False):
 
         # Select
         while node.untriedMoves == [] and node.childNodes != [] and not state.game.is_over: # node is fully expanded and non-terminal
-            node = node.UCT_select_child()
+            node = node.select_best_child()
 #             print 'making select move ' + str(node.move)
             state.do_move(node.move)
 
@@ -179,7 +183,6 @@ def UCT(rootstate, itermax, verbose = False):
             node.update(state.get_result(node.playerJustMoved)) # state is terminal. update node with result from POV of ownPlayer
             node = node.parentNode
 
-    # Output some information about the tree - can be omitted
 #     if verbose:
 #         print rootnode.tree_to_string(0)
 #     else:
@@ -198,5 +201,5 @@ def kirkby_brain_fn(player, game, spied_card):
         will play. Otherwise, None
     :return: a card from my player's hand with which to vanquish my opponent.
     '''
-    move = UCT(BRState(player, game, spied_card), itermax = 1000, verbose = False)
+    move = find_best_move(BRState(player, game, spied_card), itermax = 10, verbose = False)
     return move
