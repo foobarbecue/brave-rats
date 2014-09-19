@@ -38,7 +38,7 @@ def play_game(red_brain_fn=random_ai_brain_fn, blue_brain_fn=human_brain_fn,
     game = GameStatus()
     red_player = Player(Color.red, brain_fn=red_brain_fn, hand_str=initial_red_hand_str)
     blue_player = Player(Color.blue, brain_fn=blue_brain_fn, hand_str=initial_blue_hand_str)
-
+    game.initial_hands={'red':initial_red_hand_str,'blue':initial_blue_hand_str}
     while not game.is_over:
         red_card, blue_card = _get_played_cards(red_player, blue_player, game)
         result = resolve_fight(red_card, blue_card, game)
@@ -74,14 +74,17 @@ def print_match_summary(games):
 
 
 def play_match(red_brain_fn=human_brain_fn, blue_brain_fn=random_ai_brain_fn,
-               num_games=1, verbose=True, quiet_games=True):
+               num_games=1, verbose=True, quiet_games=True,
+               initial_red_hand_str=None, initial_blue_hand_str=None):
     if verbose:
         sys.stdout.write('\n')
     for game_index in range(num_games):
         game = play_game(
             red_brain_fn=red_brain_fn,
             blue_brain_fn=blue_brain_fn,
-            verbose=not quiet_games
+            verbose=not quiet_games,
+            initial_red_hand_str=initial_red_hand_str,
+            initial_blue_hand_str=initial_blue_hand_str
         )
         if quiet_games and verbose:
             # Games are quiet, so print some stuff at this level
@@ -103,6 +106,8 @@ def args_from_match_parser():
     parser.add_argument('-n', '--num-games', type=int, help='Number of games to play in this match')
     parser.add_argument('-q', '--quiet-games', action='store_true', default=False,
                         help='Set to have only game results (not turn-by-turn details) printed to stdout')
+    parser.add_argument('-rh', '--initial_red_hand_str', help='Initial red hand as string')
+    parser.add_argument('-bh', '--initial_blue_hand_str', help='Initial blue hand as string')
     args = vars(parser.parse_args())  # Convert the Namespace to a dict
     args = {k:v for k,v in args.items() if v is not None}  # Remove None values
 
