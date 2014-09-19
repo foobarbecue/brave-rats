@@ -21,12 +21,10 @@ def reconstruct_hand(state,player_color):
         if state.blue_card in hand:
             hand.remove(state.blue_card)
             'removing half-round blue card from imaginary hand' + str(state.red_card)
-        print blueify(str(hand))
     elif player_color.name == 'red':
         if state.red_card in hand:
             'removing half-round red card from imaginary hand' + str(state.red_card)
             hand.remove(state.red_card)
-        print redify(str(hand))
     return hand
 
 class BRState(object):
@@ -39,17 +37,12 @@ class BRState(object):
         self.red_player = Player(Color.red, brain_fn=None)
         self.blue_player = Player(Color.blue, brain_fn=None)
         if player.color == Color.red:
-#             self.red_player.hand = player.hand
             self.playerToMoveNext = self.red_player
             self.playerJustMoved = self.blue_player
-#             self.blue_player.hand=reconstruct_hand(game=game,player_color=self.blue_player.color)
         elif player.color == Color.blue:
-#             self.blue_player.hand = player.hand
             self.playerToMoveNext = self.blue_player
             self.playerJustMoved = self.red_player
-#             self.red_player.hand=reconstruct_hand(game=game,player_color=self.red_player.color)
 
-        # use these later for imaginary play
         self.red_card = None
         self.blue_card = None
     def clone(self):
@@ -63,7 +56,6 @@ class BRState(object):
         Play a single card (half of a round)
         '''
 
-        print "imagine if {} plays a {}".format(self.playerToMoveNext.color.name, move)
         if self.playerToMoveNext == self.red_player:
             self.red_card = move
         elif self.playerToMoveNext == self.blue_player:
@@ -71,11 +63,10 @@ class BRState(object):
         self.advance_to_next_player()
 
         if self.red_card is not None and self.blue_card is not None:
-            print "resolving fight with {} and {}".format(self.red_card, self.blue_card)
             resolve_fight(self.red_card, self.blue_card, self.game)
             spy_color = successful_spy_color(self.game.most_recent_fight)
             if spy_color == self.red_player.color:
-                print "blue plays twice due to spy"
+                # blue plays twice due to spy
                 self.advance_to_next_player()
             self.red_card = None
             self.blue_card = None
@@ -176,8 +167,6 @@ def find_best_move(rootstate, itermax, verbose = False):
     rootnode = Node(state = rootstate)
 
     for i in range(itermax):
-        print '---------------------  starting at root node  ---------------------'
-        print 'rootstate has {}'.format(rootstate.game.all_fights)
         node = rootnode
         state = rootstate.clone()
 
@@ -185,20 +174,20 @@ def find_best_move(rootstate, itermax, verbose = False):
         while node.untriedMoves == [] and node.childNodes != [] and not state.game.is_over: # node is fully expanded and non-terminal
 
             node = node.select_best_child()
-            print 'making select move'+ str(node.move)
+            #print 'making select move'+ str(node.move)
             state.do_move(node.move)
 
         # Expand
         if node.untriedMoves != []: # if we can expand (i.e. state/node is non-terminal)
             m = random.choice(node.untriedMoves)
-            print 'making expand move ' + str(m)
+            #print 'making expand move ' + str(m)
             state.do_move(m)
             node = node.add_child(m,state) # add child and descend tree
 
         # Rollout - this can often be made orders of magnitude quicker using a state.GetRandomMove() function
         while not state.game.is_over: # while state is non-terminal
             m = random.choice(state.get_moves())
-            print 'making rollout move ' + str(m)
+            #print 'making rollout move ' + str(m)
             state.do_move(m)
 #         print "imaginary game end with {}".format(state.game.all_fights)
 #         if state.game.winner:
@@ -211,10 +200,10 @@ def find_best_move(rootstate, itermax, verbose = False):
             node.update(state.get_result(node.playerJustMoved)) # state is terminal. update node with result from POV of ownPlayer
             node = node.parentNode
 
-    if verbose:
-        print rootnode.tree_to_string(0)
-    else:
-        print rootnode.children_to_string()
+#     if verbose:
+#         print rootnode.tree_to_string(0)
+#     else:
+#         print rootnode.children_to_string()
 
     return sorted(rootnode.childNodes, key = lambda c: c.visits)[-1].move # return the move that was most visited
 
@@ -229,5 +218,5 @@ def kirkby_brain_fn(player, game, spied_card):
         will play. Otherwise, None
     :return: a card from my player's hand with which to vanquish my opponent.
     '''
-    move = find_best_move(BRState(player, game, spied_card), itermax = 15, verbose = False)
+    move = find_best_move(BRState(player, game, spied_card), itermax = 1000, verbose = False)
     return move
