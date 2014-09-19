@@ -11,6 +11,11 @@ from components.game_status import GameStatus
 from components.player import Player
 from components.style import blueify, redify
 
+TAUNTS = [
+          "Are you OK? You look a little RATtled.",
+          "I've heard you aren't a very highly RATed player."
+          ]
+
 def reconstruct_hand(state,player_color):
     '''
     Calculate a player's hand from the move history stored in the game instance.
@@ -218,5 +223,6 @@ def kirkby_brain_fn(player, game, spied_card):
         will play. Otherwise, None
     :return: a card from my player's hand with which to vanquish my opponent.
     '''
-    move = find_best_move(BRState(player, game, spied_card), itermax = 1000, verbose = False)
-    return move
+    if not game.is_over:
+        move = find_best_move(BRState(player, game, spied_card), itermax = 1000, verbose = False)
+        return move
